@@ -141,7 +141,9 @@ try {
         $defenderStatusOutput += "SUCCESS: Defender fully active."
         $passedChecks++
     } else {
-        try { Set-MpPreference -DisableRealtimeMonitoring $false } catch {}
+        try {
+            Set-MpPreference -DisableRealtimeMonitoring $false
+        } catch {}
         $defenderStatusOutput += "FAILURE: Defender issues detected."
     }
 } catch {
@@ -151,7 +153,7 @@ try {
 # <----------- Defender Exclusions Check ----------->
 try {
     $exclusions = (Get-MpPreference).ExclusionPath
-    if (-not $exclusions) {
+    if (-not $exclusions -or $exclusions.Count -eq 0) {
         $exclusionsOutput += "SUCCESS: No exclusions."
         $passedChecks++
     } else {
@@ -164,7 +166,7 @@ try {
 # <----------- Active Threats Check ----------->
 try {
     $threats = Get-MpThreatDetection
-    if (-not $threats) {
+    if (-not $threats -or $threats.Count -eq 0) {
         $activeThreatsOutput += "SUCCESS: No active threats."
         $passedChecks++
     } else {
@@ -178,7 +180,7 @@ try {
 try {
     $catalog = Get-MpThreat
     $bad = $catalog | Where-Object { $_.Status -in "Active","Allowed" -or -not $_.ActionSuccess }
-    if (-not $bad) {
+    if (-not $bad -or $bad.Count -eq 0) {
         $threatCatalogOutput += "SUCCESS: Threat catalog clean."
         $passedChecks++
     } else {
@@ -255,7 +257,7 @@ try {
 try {
     $keyPath = "C:\ProgramData\KeyAuth\debug"
     $folders = Get-ChildItem $keyPath -Directory -ErrorAction SilentlyContinue
-    if (-not $folders) {
+    if (-not $folders -or $folders.Count -eq 0) {
         $keyAuthOutput += "SUCCESS: No suspicious folders."
         $passedChecks++
     } else {
@@ -286,7 +288,8 @@ try {
     $suspicious = $false
     $entries = Get-ItemProperty $muiPath -ErrorAction SilentlyContinue
     if ($entries) {
-        foreach ($prop in $entries.PSObject.Properties) {
+        $properties = $entries.PSObject.Properties
+        foreach ($prop in $properties) {
             if (\( prop.Name -match '\.exe \)') {
                 $lower = $prop.Name.ToLower()
                 foreach ($word in $blacklist) {
