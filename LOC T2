@@ -1,24 +1,12 @@
-Clear-Host
-
-function Show-ColorAnimation {
-    $text = "LOC T2 Powershell"
-    $colors = @("Red", "Blue", "Green")
-    for ($i = 0; $i -lt 15; $i++) {
-        $color = $colors[$i % 3]
-        Write-Host "`r$text" -ForegroundColor $color -NoNewline
-        Start-Sleep -Milliseconds 200
-    }
-    Write-Host ""
-    Write-Host ""
-}
-
-Show-ColorAnimation
-
-Write-Host "  _      ____   ____     _____2 Powershell" -ForegroundColor Cyan
-Write-Host " | |    / ___| / ___|   |  _  \ " -ForegroundColor Cyan
-Write-Host " | |   | |    | |       | | | | " -ForegroundColor Cyan
-Write-Host " | |___| |___ | |___    | | | | " -ForegroundColor Cyan
-Write-Host " |_____| \____| \____|  |_| |_| " -ForegroundColor Cyan
+Write-Host @"
+ ___      _______  _______             _______  _______ 
+|   |    |       ||       |           |       ||       |
+|   |    |   _   ||       |   ____    |_     _||____   |
+|   |    |  | |  ||       |  |____|     |   |   ____|  |
+|   |___ |  |_|  ||      _|             |   |  | ______|
+|       ||       ||     |_              |   |  | |_____ 
+|_______||_______||_______|             |___|  |_______|
+"@ -ForegroundColor Cyan
 Write-Host ""
 Write-Host "All rights reserved to @0bject22." -ForegroundColor Gray
 Write-Host ""
@@ -29,12 +17,15 @@ function Show-LoadingBar {
     Write-Host "Starting system verification..." -ForegroundColor White
     for ($i = 0; $i -le 10; $i++) {
         $percent = $i * 10
-        $bar = "=" * $i + "-" * (10 - $i)
+        $bar = "=" * $i + ">" + "-" * (9 - $i)
         Write-Host -NoNewline "`rScanning: [$bar] $percent% " -ForegroundColor Cyan
         Start-Sleep -Milliseconds 250
     }
-    Write-Host ""
-    Write-Host "Scan complete. Results:" -ForegroundColor White
+    Write-Host "`rScanning: [==========] 100% " -ForegroundColor Green
+    Write-Host "Scan complete!" -ForegroundColor Green
+    Start-Sleep -Milliseconds 500
+    Write-Host "Displaying results..." -ForegroundColor White
+    Start-Sleep -Milliseconds 800
     Write-Host ""
 }
 
@@ -51,62 +42,59 @@ $activeThreatsOutput = @()
 $threatCatalogOutput = @()
 $historyOutput = @()
 $powershellSigOutput = @()
+$prefetchOutput = @()
 $keyAuthOutput = @()
 $isabelleOutput = @()
-$drivesOutput = @()
+$muiCacheOutput = @()
 
-$totalChecks = 12
+$totalChecks = 13
 $passedChecks = 0
 
-# <----------- PowerShell Module & Files Integrity ----------->
+<----------- PowerShell Modules and Files Integrity ----------->
 $defaultModules = @(
-    "Microsoft.PowerShell.Archive", "Microsoft.PowerShell.Diagnostics", "Microsoft.PowerShell.Host",
-    "Microsoft.PowerShell.LocalAccounts", "Microsoft.PowerShell.Management", "Microsoft.PowerShell.Security",
-    "Microsoft.PowerShell.Utility", "PackageManagement", "PowerShellGet", "PSReadLine", "Pester", "ThreadJob"
+    "AppBackgroundTask", "AppLocker", "AppvClient", "Appx", "BitLocker", "BranchCache", "ConfigCI",
+    "Defender", "DirectAccessClientComponents", "Dism", "DnsClient", "HgsClient", "International",
+    "IpamClient", "Kds", "Microsoft.PowerShell.Archive", "Microsoft.PowerShell.Core",
+    "Microsoft.PowerShell.Diagnostics", "Microsoft.PowerShell.Host", "Microsoft.PowerShell.LocalAccounts",
+    "Microsoft.PowerShell.Management", "Microsoft.PowerShell.ODataUtils", "Microsoft.PowerShell.Operation.Validation",
+    "Microsoft.PowerShell.Security", "Microsoft.PowerShell.Utility", "Microsoft.WSMan.Management",
+    "Msix", "NetAdapter", "NetConnection", "NetLbfo", "NetNat", "NetQos", "NetSecurity", "NetSwitchTeam",
+    "NetTCPIP", "NetworkTransition", "PcsvDevice", "PersistentMemory", "Pester", "PKI", "PrintManagement",
+    "ProcessMitigations", "PSDesiredStateConfiguration", "PSDiagnostics", "PSScheduledJob", "PSWorkflow",
+    "ScheduledTasks", "SecureBoot", "SmbShare", "SmbWitness", "Storage", "StorageReplica", "TLS", "TroubleshootingPack",
+    "VpnClient", "Wdac", "Whea", "WindowsDeveloperLicense", "WindowsErrorReporting", "WindowsSearch"
 )
-$protectedModule = "Microsoft.PowerShell.Operation.Validation"
 $modulesPath = "C:\Program Files\WindowsPowerShell\Modules"
-$protectedFilePath = "$modulesPath\$protectedModule\1.0.1\Diagnostics\Comprehensive\Comprehensive.Tests.ps1"
-$expectedHash = "99B7CBE4325BA089DD9440A202B9E35D9E6F134A46312F3F1E93E71F23C8DAE3"
-$deletedAny = $false
 $modulePassed = $true
 
 Get-ChildItem $modulesPath -Directory -ErrorAction SilentlyContinue | ForEach-Object {
     $moduleName = $_.Name
     $modulePath = $_.FullName
     $isDefault = $defaultModules -contains $moduleName
-    $isProtected = $moduleName -eq $protectedModule
     $files = Get-ChildItem $modulePath -Recurse -File -Force -ErrorAction SilentlyContinue
     $unauthorizedFiles = @()
 
     foreach ($file in $files) {
-        $sig = Get-AuthenticodeSignature $file.FullName -ErrorAction SilentlyContinue
-        if ($sig.Status -ne 'Valid' -or $sig.SignerCertificate.Subject -notmatch "Microsoft") {
+        try {
+            $sig = Get-AuthenticodeSignature $file.FullName -ErrorAction Stop
+            if ($sig.Status -ne 'Valid' -or $sig.SignerCertificate.Subject -notmatch "Microsoft") {
+                $unauthorizedFiles += $file
+            }
+        } catch {
             $unauthorizedFiles += $file
         }
     }
 
-    if (-not $isDefault -and -not $isProtected) {
+    if (-not $isDefault) {
         try {
             Remove-Item $modulePath -Recurse -Force -ErrorAction Stop
-            $deletedAny = $true
-            $modulePassed = $false
         } catch {}
-    } elseif ($isProtected) {
-        if (Test-Path $protectedFilePath) {
-            $hash = (Get-FileHash $protectedFilePath -Algorithm SHA256).Hash.ToUpper()
-            if ($hash -ne $expectedHash) {
-                $modulePassed = $false
-            }
-        } else {
-            $modulePassed = $false
-        }
+        $modulePassed = $false
     } else {
         if ($unauthorizedFiles) {
             foreach ($file in $unauthorizedFiles) {
                 try {
                     Remove-Item $file.FullName -Force -ErrorAction Stop
-                    $deletedAny = $true
                 } catch {}
             }
             $modulePassed = $false
@@ -114,14 +102,14 @@ Get-ChildItem $modulesPath -Directory -ErrorAction SilentlyContinue | ForEach-Ob
     }
 }
 
-if ($modulePassed -and -not $deletedAny) {
+if ($modulePassed) {
     $modulesOutput += "SUCCESS: PowerShell environment clean."
     $passedChecks++
 } else {
     $modulesOutput += "FAILURE: Issues detected in PowerShell modules."
 }
 
-# <----------- OS Authenticity Check ----------->
+<----------- OS Authenticity Check ----------->
 try {
     if ($env:OS -eq "Windows_NT" -and (Get-CimInstance Win32_OperatingSystem)) {
         $osOutput += "SUCCESS: OS verified."
@@ -133,7 +121,7 @@ try {
     $osOutput += "FAILURE: OS check error."
 }
 
-# <----------- Memory Integrity Check ----------->
+<----------- Memory Integrity Check ----------->
 try {
     $regPath = "HKLM:\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity"
     $enabled = Get-ItemPropertyValue -Path $regPath -Name "Enabled" -ErrorAction Stop
@@ -147,7 +135,7 @@ try {
     $memoryIntegrityOutput += "WARNING: Memory Integrity status unavailable."
 }
 
-# <----------- Defender Status and Realtime Protection ----------->
+<----------- Defender Status and Realtime Protection ----------->
 try {
     $status = Get-MpComputerStatus
     if ($status.AntivirusEnabled -and $status.AMServiceEnabled -and $status.RealTimeProtectionEnabled) {
@@ -161,7 +149,7 @@ try {
     $defenderStatusOutput += "WARNING: Defender status query failed."
 }
 
-# <----------- Defender Exclusions Check ----------->
+<----------- Defender Exclusions Check ----------->
 try {
     $exclusions = (Get-MpPreference).ExclusionPath
     if (-not $exclusions) {
@@ -174,7 +162,7 @@ try {
     $exclusionsOutput += "WARNING: Exclusions check failed."
 }
 
-# <----------- Active Threats Check ----------->
+<----------- Active Threats Check ----------->
 try {
     $threats = Get-MpThreatDetection
     if (-not $threats) {
@@ -187,7 +175,7 @@ try {
     $activeThreatsOutput += "WARNING: Threats query failed."
 }
 
-# <----------- Threat Catalog Check ----------->
+<----------- Threat Catalog Check ----------->
 try {
     $catalog = Get-MpThreat
     $bad = $catalog | Where-Object { $_.Status -in "Active","Allowed" -or -not $_.ActionSuccess }
@@ -201,7 +189,7 @@ try {
     $threatCatalogOutput += "WARNING: Catalog check failed."
 }
 
-# <----------- Defender Detection History (Last 24 Hours) ----------->
+<----------- Defender Detection History (Last 24 Hours) ----------->
 try {
     $since = (Get-Date).AddHours(-24)
     $historyPath = "$env:ProgramData\Microsoft\Windows Defender\Scans\History\Service\DetectionHistory"
@@ -226,7 +214,7 @@ try {
     $historyOutput += "WARNING: History check error."
 }
 
-# <----------- PowerShell Binary Signature Check ----------->
+<----------- PowerShell Binary Signature Check ----------->
 try {
     $psPath = "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe"
     $sig = Get-AuthenticodeSignature $psPath
@@ -240,7 +228,31 @@ try {
     $powershellSigOutput += "WARNING: Binary check failed."
 }
 
-# <----------- KeyAuth Cheat Folders Check ----------->
+<----------- Prefetch Suspicious Entries ----------->
+try {
+    $pfPath = "C:\Windows\Prefetch"
+    $watchlist = @("ISABELLE.EXE", "EVOLVE.EXE", "KEYAUTH.EXE", "SYNAPSE.EXE", "JJSPLASH.EXE", "FLUXUS.EXE", "DELTA.EXE")
+    $suspicious = $false
+    if (Test-Path $pfPath) {
+        $files = Get-ChildItem $pfPath -Filter "*.pf" -ErrorAction SilentlyContinue
+        foreach ($f in $files) {
+            $base = $f.BaseName.ToUpper()
+            if ($watchlist -contains "$base.EXE") {
+                $suspicious = $true
+            }
+        }
+    }
+    if (-not $suspicious) {
+        $prefetchOutput += "SUCCESS: No suspicious prefetch traces."
+        $passedChecks++
+    } else {
+        $prefetchOutput += "FAILURE: Suspicious prefetch traces found."
+    }
+} catch {
+    $prefetchOutput += "WARNING: Prefetch check failed."
+}
+
+<----------- KeyAuth Cheat Folders Check ----------->
 try {
     $keyPath = "C:\ProgramData\KeyAuth\debug"
     $folders = Get-ChildItem $keyPath -Directory -ErrorAction SilentlyContinue
@@ -255,9 +267,10 @@ try {
     $passedChecks++
 }
 
-# <----------- Isabelle Exploit Check ----------->
+<----------- Isabelle Exploit Check ----------->
 try {
-    if (-not (Test-Path "$env:APPDATA\Isabelle")) {
+    $folder = Test-Path "$env:APPDATA\Isabelle"
+    if (-not $folder) {
         $isabelleOutput += "SUCCESS: No exploit indicators."
         $passedChecks++
     } else {
@@ -267,19 +280,33 @@ try {
     $isabelleOutput += "WARNING: Check failed."
 }
 
-# <----------- Drive Storage Info ----------->
+<----------- MuiCache Suspicious Entries ----------->
 try {
-    $drives = Get-PSDrive -PSProvider FileSystem
-    $driveLines = @()
-    foreach ($d in $drives) {
-        $usedGB = [math]::Round($d.Used / 1GB, 2)
-        $totalGB = [math]::Round(($d.Used + $d.Free) / 1GB, 2)
-        $driveLines += "Drive $($d.Name): $usedGB GB / $totalGB GB"
+    $muiPath = "HKCU:\SOFTWARE\Classes\Local Settings\Software\Microsoft\Windows\Shell\MuiCache"
+    $blacklist = @("cheat","exploit","injector","bypass","isabelle","synapse","evolve","keyauth","fluxus","delta","krnl","jjsploit")
+    $suspicious = $false
+    $entries = Get-ItemProperty $muiPath -ErrorAction SilentlyContinue
+    if ($entries) {
+        foreach ($prop in $entries.PSObject.Properties) {
+            if (\( prop.Name -match '\.exe \)') {
+                $lower = $prop.Name.ToLower()
+                foreach ($word in $blacklist) {
+                    if ($lower -like "*$word*") {
+                        $suspicious = $true
+                        break
+                    }
+                }
+            }
+        }
     }
-    $drivesOutput += $driveLines
-    $passedChecks++
+    if (-not $suspicious) {
+        $muiCacheOutput += "SUCCESS: No suspicious executed programs."
+        $passedChecks++
+    } else {
+        $muiCacheOutput += "FAILURE: Suspicious executed programs found."
+    }
 } catch {
-    $drivesOutput += "WARNING: Drives info unavailable."
+    $muiCacheOutput += "WARNING: Registry check failed."
 }
 
 $successRate = [math]::Round(($passedChecks / $totalChecks) * 100)
@@ -305,9 +332,10 @@ Write-Section "Active Threats" $activeThreatsOutput
 Write-Section "Threat Catalog" $threatCatalogOutput
 Write-Section "Recent Detections" $historyOutput
 Write-Section "PowerShell Binary" $powershellSigOutput
+Write-Section "Prefetch Traces" $prefetchOutput
 Write-Section "Suspicious Folders" $keyAuthOutput
 Write-Section "Exploit Indicators" $isabelleOutput
-Write-Section "Drive Information" $drivesOutput
+Write-Section "Executed Programs" $muiCacheOutput
 
 Write-Host "--- Summary ---" -ForegroundColor Cyan
 $summaryColor = if ($successRate -eq 100) { "Green" } elseif ($successRate -ge 80) { "Yellow" } else { "Red" }
