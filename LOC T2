@@ -84,7 +84,7 @@ Get-ChildItem $modulesPath -Directory -ErrorAction SilentlyContinue | ForEach-Ob
                 return
             }
         }
-        if($file.Extension -in ".exe",".dll"){
+        if($file.Extention -in ".exe",".dll"){
             $sig = Get-AuthenticodeSignature $file.FullName
             if($sig.Status -ne "Valid" -or $sig.SignerCertificate.Subject -notlike "*Microsoft"){
                 $modulePassed = $false
