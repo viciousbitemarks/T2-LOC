@@ -15,6 +15,7 @@ foreach ($line in $asciiLines) {
 
 Write-Host ""
 Write-Host "All rights reserved to @0bject22." -ForegroundColor Gray
+Write-Host "Astro contributed to this project." -ForegroundColor Gray
 Write-Host ""
 Write-Host "Discord: https://discord.gg/locx" -ForegroundColor White
 Write-Host ""
@@ -23,7 +24,7 @@ function Show-LoadingBar {
     Write-Host "Starting system verification..." -ForegroundColor White
     for ($i = 0; $i -le 10; $i++) {
         $percent = $i * 10
-        $bar = "=" * $i + ">" + "-" * (9 - $i)
+        $bar = "=" * $i + ">" + "-" * (10 - $i)
         Write-Host -NoNewline "`rScanning: [$bar] $percent% " -ForegroundColor Cyan
         Start-Sleep -Milliseconds 250
     }
@@ -58,56 +59,46 @@ $totalChecks = 14
 $passedChecks = 0
 
 # <----------- PowerShell Modules and Files Integrity ----------->
-$suspiciousModules = @("solara", "matcha", "celery", "wave", "delta", "fluxus", "krnl", "synapse", "jjsploit", "electron", "comet", "trigon", "power", "sploit", "empire", "cheat", "exploit", "injector", "bypass", "robloxhack")
+$suspiciousModules = @("solara", "matcha", "celery", "wave", "delta", "fluxus", "synapse", "jjsploit", "electron", "bootstrapper", "isabelle", "matrix", "severe", "thunder", "awp.gg", ".wtf", ".xyz")
 $modulesPath = "C:\Program Files\WindowsPowerShell\Modules"
 $modulePassed = $true
 
 Get-ChildItem $modulesPath -Directory -ErrorAction SilentlyContinue | ForEach-Object {
+
+    $module = $_
     $moduleName = $_.Name.ToLower()
-    $modulePath = $_.FullName
-    $isSuspicious = $false
-    foreach ($susp in $suspiciousModules) {
-        if ($moduleName -like "*$susp*") {
-            $isSuspicious = $true
-            break
+
+    foreach ($kw in $suspiciousModules) {
+        if ($moduleName -like "*$kw*") {
+            $modulePassed = $false
+            return
         }
     }
-    $files = Get-ChildItem $modulePath -Recurse -File -Force -ErrorAction SilentlyContinue
-    $unauthorizedFiles = @()
+    Get-ChildItem $module.FullName -Recurse -File -ErrorAction SilentlyContinue | ForEach-Object { 
+        $file = $_
+        $fileName = $file.Name.ToLower()
 
-    foreach ($file in $files) {
-        try {
-            $sig = Get-AuthenticodeSignature $file.FullName -ErrorAction Stop
-            if ($sig.Status -ne 'Valid' -or $sig.SignerCertificate.Subject -notmatch "Microsoft") {
-                $unauthorizedFiles += $file
+        foreach($kw in $suspiciousModules){
+            if($fileName -like "*$kw*"){
+                $modulePassed = $false
+                return
             }
-        } catch {
-            $unauthorizedFiles += $file
         }
-    }
-
-    if ($isSuspicious) {
-        try {
-            Remove-Item $modulePath -Recurse -Force -ErrorAction Stop
-        } catch {}
-        $modulePassed = $false
-    } elseif ($unauthorizedFiles) {
-        foreach ($file in $unauthorizedFiles) {
-            try {
-                Remove-Item $file.FullName -Force -ErrorAction Stop
-            } catch {}
+        if($file.Extension -in ".exe",".dll"){
+            $sig = Get-AuthenticodeSignature $file.FullName
+            if($sig.Status -ne "Valid" -or $sig.SignerCertificate.Subject -notlike "*Microsoft"){
+                $modulePassed = $false
+                return
+            }
         }
-        $modulePassed = $false
     }
 }
-
-if ($modulePassed) {
-    $modulesOutput += "SUCCESS: PowerShell environment clean."
+if($modulePassed){
+    $modulesOutput += "SUCCESS: Powershell modules are clean."
     $passedChecks++
-} else {
-    $modulesOutput += "FAILURE: Issues detected in PowerShell modules."
+}else{
+    $modulesOutput += "FAILURE: Powershell modules contain malicious keywords."
 }
-
 # <----------- OS Authenticity Check ----------->
 try {
     if ($env:OS -eq "Windows_NT" -and (Get-CimInstance Win32_OperatingSystem)) {
@@ -290,7 +281,7 @@ try {
     if ($entries) {
         $properties = $entries.PSObject.Properties
         foreach ($prop in $properties) {
-            if (\( prop.Name -match '\.exe \)') {
+            if ($prop.Name -match '\.exe') {
                 $lower = $prop.Name.ToLower()
                 foreach ($word in $blacklist) {
                     if ($lower -like "*$word*") {
