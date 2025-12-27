@@ -14,8 +14,8 @@ foreach ($line in $asciiLines) {
 }
 
 Write-Host ""
-Write-Host "All rights reserved to @0bject22." -ForegroundColor Gray
-Write-Host "Astro contributed to this project." -ForegroundColor Gray
+Write-Host "All rights reserved to @hexbag." -ForegroundColor Yellow
+Write-Host "Astro contributed to this project." -ForegroundColor Yellow
 Write-Host ""
 Write-Host "Discord: https://discord.gg/locx" -ForegroundColor White
 Write-Host ""
