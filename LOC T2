@@ -24,7 +24,7 @@ function Show-LoadingBar {
     Write-Host "Starting system verification..." -ForegroundColor White
     for ($i = 0; $i -le 10; $i++) {
         $percent = $i * 10
-        $bar = "=" * $i + ">" + "-" * (10 - $i)
+        $bar = "=" * $i + ">" + "-" * (9 - $i)
         Write-Host -NoNewline "`rScanning: [$bar] $percent% " -ForegroundColor Cyan
         Start-Sleep -Milliseconds 250
     }
@@ -298,9 +298,8 @@ try {
     } else {
         $muiCacheOutput += "FAILURE: Suspicious executed programs found."
         foreach ($file in $suspiciousFiles) {
-            $muiCacheOutput += "Detected: $file" -ForegroundColor Red
+            Write-Host "Detected: $file" -ForegroundColor Red
         }
-        $passedChecks++  # Optional: count as pass but show details, or remove to fail
     }
 } catch {
     $muiCacheOutput += "WARNING: Registry check failed."
@@ -344,17 +343,10 @@ function Write-Section {
     param($Title, $Lines)
     Write-Host "--- $Title ---" -ForegroundColor Cyan
     foreach ($line in $Lines) {
-        if ($line -like "Detected:*") {
-            Write-Host $line -ForegroundColor Red
-        } elseif ($line -like "SUCCESS*") { 
-            Write-Host $line -ForegroundColor Green 
-        } elseif ($line -like "FAILURE*") { 
-            Write-Host $line -ForegroundColor Red 
-        } elseif ($line -like "WARNING*") { 
-            Write-Host $line -ForegroundColor Yellow 
-        } else { 
-            Write-Host $line -ForegroundColor White 
-        }
+        if ($line -like "SUCCESS*") { Write-Host $line -ForegroundColor Green }
+        elseif ($line -like "FAILURE*") { Write-Host $line -ForegroundColor Red }
+        elseif ($line -like "WARNING*") { Write-Host $line -ForegroundColor Yellow }
+        else { Write-Host $line -ForegroundColor White }
     }
     Write-Host ""
 }
