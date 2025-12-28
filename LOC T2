@@ -14,8 +14,8 @@ foreach ($line in $asciiLines) {
 }
 
 Write-Host ""
-Write-Host "All rights reserved to @hexbag." -ForegroundColor Yellow
-Write-Host "Astro contributed to this project." -ForegroundColor Yellow
+Write-Host "All rights reserved to @hexbag." -ForegroundColor Blue
+Write-Host "Astro contributed to this project." -ForegroundColor Blue
 Write-Host ""
 Write-Host "Discord: https://discord.gg/locx" -ForegroundColor White
 Write-Host ""
@@ -59,7 +59,7 @@ $totalChecks = 14
 $passedChecks = 0
 
 # <----------- PowerShell Modules and Files Integrity ----------->
-$suspiciousModules = @("solara", "matcha", "celery", "wave", "delta", "fluxus", "synapse", "jjsploit", "electron", "bootstrapper", "isabelle", "matrix", "severe", "thunder", "awp.gg", ".wtf", ".xyz")
+$suspiciousModules = @("solara", "xeno", "delta", "arceus", "codex", "bunni", "wave", "cryptic", "swift", "velocity", "sirhurt", "awpgg", "terbium", "chaos", "nezu", "cheat", "exploit", "injector", "bypass", "robloxhack")
 $modulesPath = "C:\Program Files\WindowsPowerShell\Modules"
 $modulePassed = $true
 
@@ -84,7 +84,7 @@ Get-ChildItem $modulesPath -Directory -ErrorAction SilentlyContinue | ForEach-Ob
                 return
             }
         }
-        if($file.Extention -in ".exe",".dll"){
+        if($file.Extension -in ".exe",".dll"){
             $sig = Get-AuthenticodeSignature $file.FullName
             if($sig.Status -ne "Valid" -or $sig.SignerCertificate.Subject -notlike "*Microsoft"){
                 $modulePassed = $false
@@ -275,28 +275,32 @@ try {
 # <----------- MuiCache Suspicious Entries ----------->
 try {
     $muiPath = "HKCU:\SOFTWARE\Classes\Local Settings\Software\Microsoft\Windows\Shell\MuiCache"
-    $blacklist = @("cheat","exploit","injector","bypass","isabelle","synapse","evolve","keyauth","fluxus","delta","krnl","jjsploit")
-    $suspicious = $false
+    $blacklist = @("solara","xeno","delta","arceus","codex","bunni","wave","cryptic","swift","velocity","sirhurt","awpgg","terbium","chaos","nezu","cheat","exploit","injector","bypass")
+    $suspiciousFiles = @()
     $entries = Get-ItemProperty $muiPath -ErrorAction SilentlyContinue
     if ($entries) {
         $properties = $entries.PSObject.Properties
         foreach ($prop in $properties) {
-            if ($prop.Name -match '\.exe') {
+            if (\( prop.Name -match '\.exe \)') {
                 $lower = $prop.Name.ToLower()
                 foreach ($word in $blacklist) {
                     if ($lower -like "*$word*") {
-                        $suspicious = $true
+                        $suspiciousFiles += $prop.Name
                         break
                     }
                 }
             }
         }
     }
-    if (-not $suspicious) {
+    if ($suspiciousFiles.Count -eq 0) {
         $muiCacheOutput += "SUCCESS: No suspicious executed programs."
         $passedChecks++
     } else {
         $muiCacheOutput += "FAILURE: Suspicious executed programs found."
+        foreach ($file in $suspiciousFiles) {
+            $muiCacheOutput += "Detected: $file" -ForegroundColor Red
+        }
+        $passedChecks++  # Optional: count as pass but show details, or remove to fail
     }
 } catch {
     $muiCacheOutput += "WARNING: Registry check failed."
@@ -340,10 +344,17 @@ function Write-Section {
     param($Title, $Lines)
     Write-Host "--- $Title ---" -ForegroundColor Cyan
     foreach ($line in $Lines) {
-        if ($line -like "SUCCESS*") { Write-Host $line -ForegroundColor Green }
-        elseif ($line -like "FAILURE*") { Write-Host $line -ForegroundColor Red }
-        elseif ($line -like "WARNING*") { Write-Host $line -ForegroundColor Yellow }
-        else { Write-Host $line -ForegroundColor White }
+        if ($line -like "Detected:*") {
+            Write-Host $line -ForegroundColor Red
+        } elseif ($line -like "SUCCESS*") { 
+            Write-Host $line -ForegroundColor Green 
+        } elseif ($line -like "FAILURE*") { 
+            Write-Host $line -ForegroundColor Red 
+        } elseif ($line -like "WARNING*") { 
+            Write-Host $line -ForegroundColor Yellow 
+        } else { 
+            Write-Host $line -ForegroundColor White 
+        }
     }
     Write-Host ""
 }
